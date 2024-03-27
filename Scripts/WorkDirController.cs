@@ -23,6 +23,8 @@ namespace Ressap.L10nTool {
 
         public override void _Ready() {
             btnChangeWorkDir.Pressed += OnBtnChangeWorkDirClick;
+
+            WorkDir = this.GetModel<ISettingsModel>().WorkDir.Value;
         }
 
         private void OnBtnChangeWorkDirClick() {
@@ -40,14 +42,12 @@ namespace Ressap.L10nTool {
 
         private void OnDirSelected(string dir) {
             WorkDir = dir;
-            GD.Print($"dir = {dir}");
+            this.GetModel<ISettingsModel>().WorkDir.Value = dir;
         }
 
         public IArchitecture GetArchitecture() {
             return L10nToolApp.Interface;
         }
-
-
     }
 }
 
