@@ -7,24 +7,9 @@ namespace Ressap.L10nTool {
         [Export] private Label txtWorkDir;
         [Export] private Button btnChangeWorkDir;
 
-        public string WorkDir {
-            get {
-                return workDir;
-            }
-            set {
-                if (null != value && !value.Equals(workDir)) {
-                    workDir = value;
-                    txtWorkDir.Text = value;
-                }
-            }
-        }
-
-        private string workDir;
-
         public override void _Ready() {
             btnChangeWorkDir.Pressed += OnBtnChangeWorkDirClick;
-
-            WorkDir = this.GetModel<ISettingsModel>().WorkDir.Value;
+            updateWorkDirText();
         }
 
         private void OnBtnChangeWorkDirClick() {
@@ -40,9 +25,14 @@ namespace Ressap.L10nTool {
             fileDialog.PopupCentered(new Vector2I(1280, 720));
         }
 
+
         private void OnDirSelected(string dir) {
-            WorkDir = dir;
-            this.GetModel<ISettingsModel>().WorkDir.Value = dir;
+            this.SendCommand<ChangeWorkDirCmd>(new ChangeWorkDirCmd(dir));
+            updateWorkDirText();
+        }
+
+        private void updateWorkDirText() {
+            txtWorkDir.Text = this.GetModel<ISettingsModel>().WorkDir.Value;
         }
 
         public IArchitecture GetArchitecture() {

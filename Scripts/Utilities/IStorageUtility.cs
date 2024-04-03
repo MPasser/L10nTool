@@ -1,3 +1,4 @@
+using System.IO;
 using Godot;
 using Newtonsoft.Json;
 using QFramework;
@@ -12,14 +13,20 @@ namespace Ressap.L10nTool {
     public class ResourceStorageUtility : IStorageUtility {
 
         public T Load<T>(string field, T defaultVal = default) {
-            makeSureFile(field);
-            FileAccess fa = FileAccess.Open(field, FileAccess.ModeFlags.Read);
-            if (null == fa) {
-                GD.Print($"File {field} not exists.");
-                return default;
+            string filePath = transFilePath(field);
+
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+
+            using FileStream fs = new(filePath, FileMode.OpenOrCreate);
+            using BinaryReader br = new(fs);
+
+            string jsonStr = null;
+
+            try {
+                jsonStr = br.ReadString();
+            } catch (EndOfStreamException) {
+                GD.Print($"File {filePath} is empty.");
             }
-            string jsonStr = fa.GetAsText();
-            GD.Print($"Load jsonStr = {jsonStr}");
             if (string.IsNullOrEmpty(jsonStr)) {
                 return defaultVal;
             }
@@ -27,37 +34,28 @@ namespace Ressap.L10nTool {
         }
 
         public void Save<T>(T val, string field) {
-            string jsonStr = JsonConvert.SerializeObject(val);
+            string filePath = transFilePath(field);
 
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+
+            string jsonStr = JsonConvert.SerializeObject(val);
             GD.Print($"Save jsonStr = {jsonStr}");
 
-            makeSureFile(field);
-            using (FileAccess fa = FileAccess.Open(field, FileAccess.ModeFlags.WriteRead)) {
-                fa.StoreString(jsonStr);
-            }
+            using FileStream fs = new(filePath, FileMode.Create);
+            using BinaryWriter bw = new(fs);
+
+            bw.Write(jsonStr);
         }
 
-        private void makeSureFile(string filePath) {
+        private string transFilePath(string filePath) {
             if (filePath.StartsWith("user://")) {
                 string userPath = ProjectSettings.GlobalizePath("user://");
-                filePath = System.IO.Path.Combine(userPath, filePath.TrimStart("user://".ToCharArray()));
+                return Path.Combine(userPath, filePath.TrimStart("user://".ToCharArray()));
             } else if (filePath.StartsWith("res://")) {
-                string userPath = ProjectSettings.GlobalizePath("res://");
-                filePath = System.IO.Path.Combine(userPath, filePath.TrimStart("res://".ToCharArray()));
-            }
-
-            if (System.IO.Directory.Exists(filePath)) {
-                GD.PrintErr($"{filePath} is a directory, can not save data here.");
-            }
-
-            string directoryPath = System.IO.Path.GetDirectoryName(filePath);
-            // GD.Print($"filePath = {filePath}");
-            // GD.Print($"directoryPath = {directoryPath}");
-            if (!System.IO.Directory.Exists(directoryPath)) {
-                System.IO.Directory.CreateDirectory(directoryPath);
-            }
-            if (!FileAccess.FileExists(filePath)) {
-                FileAccess.Open(filePath, FileAccess.ModeFlags.WriteRead);
+                string resPath = ProjectSettings.GlobalizePath("res://");
+                return Path.Combine(resPath, filePath.TrimStart("res://".ToCharArray()));
+            } else {
+                return filePath;
             }
         }
     }
